@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>LDTE 离线解密工具</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b1020;color:#dfe7f5;font:14px/1.6 "Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:20px;margin:0 0 6px}
+  .sub{color:#8fa3c4;font-size:13px;margin-bottom:18px}
+  .card{background:#121a2e;border:1px solid #24304a;border-radius:12px;padding:16px;margin-bottom:16px}
+  label{display:block;font-size:13px;color:#9fb2d0;margin-bottom:6px}
+  textarea{width:100%;height:76px;background:#0c1322;color:#9fd0ff;border:1px solid #2a3a5c;border-radius:8px;padding:10px;font-size:12px;word-break:break-all;resize:vertical}
+  input[type=file]{width:100%;color:#c9d7ee}
+  button{background:#2f5bd0;color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px}
+  button.ghost{background:#1d2a45;border:1px solid #2f4467;color:#c9d7ee}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .drop{border:1px dashed #33507e;border-radius:10px;padding:20px;text-align:center;color:#8fa3c4;cursor:pointer}
+  .drop.on{border-color:#5b8cf7;background:#16223a}
+  .item{border:1px solid #22304a;border-radius:10px;padding:12px;margin-top:12px;background:#0f1728}
+  .item h3{margin:0 0 6px;font-size:14px;color:#cfe0ff;word-break:break-all}
+  .meta{font-size:12px;color:#8fa3c4;white-space:pre-wrap;word-break:break-all}
+  .bad{color:#ff8d8d}.ok{color:#7fe0a8}
+  canvas{width:100%;height:110px;background:#0a1120;border:1px solid #22304a;border-radius:8px;margin-top:8px}
+  audio{width:100%;margin-top:10px}
+  pre{background:#0a1120;border:1px solid #22304a;border-radius:8px;padding:10px;max-height:240px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>LDTE 离线解密工具</h1>
+  <div class="sub">用于 Cloudflare 受阻时，凭管理员面板生成的 BAT1 临时密钥在本机解析 <b>.ldtc</b>（加密音频片段）与 <b>.ldte</b>（训练档案）。文件不会上传，全部在本机浏览器内完成。</div>
+
+  <div class="card">
+    <label>临时密钥（管理员面板 → LDTE 训练档案 → 离线临时密钥）</label>
+    <textarea id="token" placeholder="BAT1.xxxxxxxx.1790000000.xxxxxxxxxxxxxxxx"></textarea>
+    <div class="row">
+      <button id="use">验证并启用密钥</button>
+      <span id="tokstate" class="meta">未验证</span>
+    </div>
+    <div class="row">
+      <label style="margin:0">云端地址</label>
+      <input id="cloudbase" type="text" value="https://ba-ldte-gate.ba-ldte.workers.dev" style="flex:1;background:#0c1322;color:#ffd79f;border:1px solid #5c4a2a;border-radius:8px;padding:8px;font-size:12px">
+    </div>
+    <div class="meta">BAT1 = 离线临时密钥（本机解密）；CFK1 = 云密钥（由 Worker 解密，需要网络与云端地址）。</div>
+  </div>
+
+  <div class="card">
+    <label>选择或拖入文件（可多选）</label>
+    <div class="drop" id="drop">把 .ldtc / .ldte 拖到这里，或点击选择文件<input type="file" id="file" multiple accept=".ldtc,.ldte" style="display:none"></div>
+    <div id="results"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var master = null, masterExp = 0;
+
+  function b64urlToBytes(s){
+    s = s.replace(/-/g,'+').replace(/_/g,'/');
+    while (s.length % 4) s += '=';
+    var bin = atob(s);
+    var out = new Uint8Array(bin.length);
+    for (var i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function toHex(buf){
+    var u = new Uint8Array(buf), s = '';
+    for (var i=0;i<u.length;i++) s += u[i].toString(16).padStart(2,'0');
+    return s;
+  }
+  function concat(a,b){
+    var out = new Uint8Array(a.length + b.length);
+    out.set(a,0); out.set(b,a.length);
+    return out;
+  }
+  function fmtSize(n){
+    if (n >= 1048576) return (n/1048576).toFixed(2) + ' MB';
+    if (n >= 1024) return (n/1024).toFixed(1) + ' KB';
+    return n + ' B';
+  }
+  function el(id){ return document.getElementById(id); }
+
+  var cloud = { mode: false, token: '', base: '' };
+
+  async function cloudVerify(base, token){
+    const r = await fetch(base.replace(/\/+$/, '') + '/verify?token=' + encodeURIComponent(token), { cache: 'no-store' });
+    const d = await r.json();
+    if (!d || !d.ok) throw new Error('云端校验失败：' + ((d && d.error) || r.status));
+    return d;
+  }
+
+  async function parseToken(tok){
+    var p = String(tok || '').trim().split('.');
+    if (p.length !== 4 || p[0] !== 'BAT1') throw new Error('格式不是 BAT1 临时密钥');
+    var key = b64urlToBytes(p[1]);
+    if (key.length !== 32) throw new Error('密钥长度不正确');
+    var exp = parseInt(p[2], 10);
+    if (!exp) throw new Error('到期时间无效');
+    var raw = p[1] + '.' + p[2];
+    var dig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+    var fp = toHex(dig).slice(0,16);
+    if (fp !== String(p[3]).toLowerCase()) throw new Error('密钥校验失败，可能复制不完整');
+    if (Math.floor(Date.now()/1000) > exp) throw new Error('临时密钥已过期：' + new Date(exp*1000).toLocaleString());
+    return { key: key, exp: exp };
+  }
+
+  async function decryptClip(bytes, mk){
+    if (bytes.length < 101) throw new Error('片段文件过短');
+    var magic = String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3],bytes[4]);
+    if (magic !== 'LDTC1') throw new Error('不是 LDTC1 加密片段');
+    if (bytes[5] !== 1) throw new Error('片段版本不支持');
+    var off = 6, dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    var nonce  = bytes.slice(off, off+12); off += 12;
+    var tag    = bytes.slice(off, off+16); off += 16;
+    var wnonce = bytes.slice(off, off+12); off += 12;
+    var wtag   = bytes.slice(off, off+16); off += 16;
+    var wkey   = bytes.slice(off, off+32); off += 32;
+    var len = Number(dv.getBigInt64(off, true)); off += 8;
+    if (len <= 0 || off + len > bytes.length) throw new Error('片段长度信息损坏');
+    var ct = bytes.slice(off, off + len);
+    var dkRaw = await crypto.subtle.decrypt({name:'AES-GCM', iv:wnonce, tagLength:128}, mk, concat(wkey, wtag));
+    var dk = await crypto.subtle.importKey('raw', dkRaw, 'AES-GCM', false, ['decrypt']);
+    var plain = await crypto.subtle.decrypt({name:'AES-GCM', iv:nonce, tagLength:128}, dk, concat(ct, tag));
+    return new Uint8Array(plain);
+  }
+
+  function parseLdte(bytes){
+    if (bytes.length < 20) throw new Error('档案文件过短');
+    var magic = String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3]);
+    if (magic !== 'LDTE') throw new Error('不是 LDTE 训练档案');
+    var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    var off = 4;
+    var ver = dv.getUint16(off, true); off += 2;
+    var frameMs = dv.getUint16(off, true); off += 2;
+    var passes = dv.getUint32(off, true); off += 4;
+    var frames = dv.getUint32(off, true); off += 4;
+    var jsonLen = dv.getUint32(off, true); off += 4;
+    var channelCount = 4, sampleRate = 48000, flags = 0, segCount = 0;
+    if (ver >= 2){
+      channelCount = dv.getUint32(off, true); off += 4;
+      sampleRate = dv.getUint32(off, true); off += 4;
+      flags = dv.getUint32(off, true); off += 4;
+      segCount = dv.getUint32(off, true); off += 4;
+      off += 12;
+    }
+    if (ver === 0 || ver > 2) throw new Error('档案版本不支持：' + ver);
+    if (channelCount === 0 || channelCount > 64) throw new Error('通道数异常');
+    if (frames > 20000000) throw new Error('帧数异常');
+    if (jsonLen > 4*1024*1024 || off + jsonLen > bytes.length) throw new Error('头部长度异常');
+    var header = JSON.parse(new TextDecoder().decode(bytes.slice(off, off+jsonLen)));
+    off += jsonLen;
+    if (off + channelCount * frames * 4 > bytes.length) throw new Error('数据区长度不足');
+    var cols = [];
+    for (var c=0;c<channelCount;c++){
+      var col = new Float32Array(frames);
+      for (var i=0;i<frames;i++){ col[i] = dv.getFloat32(off, true); off += 4; }
+      cols.push(col);
+    }
+    return { ver:ver, frameMs:frameMs, passes:passes, frames:frames, channelCount:channelCount,
+             sampleRate:sampleRate, flags:flags, segCount:segCount, header:header, cols:cols };
+  }
+
+  function drawEnvelope(canvas, col){
+    var w = canvas.width = canvas.clientWidth * (window.devicePixelRatio || 1);
+    var h = canvas.height = 220;
+    var g = canvas.getContext('2d');
+    g.clearRect(0,0,w,h);
+    g.fillStyle = '#0a1120'; g.fillRect(0,0,w,h);
+    g.strokeStyle = '#5b8cf7'; g.beginPath();
+    var n = col.length;
+    for (var x=0;x<w;x++){
+      var a = Math.floor(x * n / w), b = Math.floor((x+1) * n / w);
+      var m = 0;
+      for (var i=a;i<b && i<n;i++){ var v = Math.abs(col[i]); if (v > m) m = v; }
+      var y = h - Math.min(1, m) * (h - 8) - 4;
+      if (x === 0) g.moveTo(x,y); else g.lineTo(x,y);
+    }
+    g.stroke();
+  }
+
+  function addResult(title, nodes, ok, text){
+    var box = document.createElement('div');
+    box.className = 'item';
+    var h = document.createElement('h3');
+    h.textContent = title + ' · ' + (ok ? '解析成功' : '失败');
+    if (!ok) h.className = 'bad';
+    box.appendChild(h);
+    if (text){
+      var m = document.createElement('div');
+      m.className = 'meta';
+      m.textContent = text;
+      box.appendChild(m);
+    }
+    (nodes||[]).forEach(function(n){ box.appendChild(n); });
+    el('results').appendChild(box);
+    return box;
+  }
+
+  var activeToken = null;
+
+  el('use').onclick = async function(){
+    var raw = String(el('token').value || '').trim();
+    if (raw.indexOf('CFK1.') === 0){
+      try{
+        var base = String(el('cloudbase').value || '').trim();
+        if (!base) throw new Error('请填写云端地址');
+        var v = await cloudVerify(base, raw);
+        cloud = { mode: true, token: raw, base: base };
+        master = null;
+        el('tokstate').className = 'meta ok';
+        el('tokstate').textContent = '云密钥有效，到期 ' + new Date(v.expires * 1000).toLocaleString() + '（解密在云端完成）';
+      }catch(e){
+        cloud = { mode: false, token: '', base: '' };
+        el('tokstate').className = 'meta bad';
+        el('tokstate').textContent = '云端校验失败：' + (e && e.message || e);
+      }
+      return;
+    }
+    try{
+      var t = await parseToken(raw);
+      master = await crypto.subtle.importKey('raw', t.key, 'AES-GCM', false, ['decrypt']);
+      masterExp = t.exp;
+      activeToken = raw;
+      cloud = { mode: false, token: '', base: '' };
+      el('tokstate').className = 'meta ok';
+      el('tokstate').textContent = '离线密钥有效，到期 ' + new Date(t.exp*1000).toLocaleString();
+    }catch(e){
+      master = null;
+      el('tokstate').className = 'meta bad';
+      el('tokstate').textContent = '校验失败：' + (e && e.message || e);
+    }
+  };
+
+  el('token').addEventListener('input', function(){
+    activeToken = null; master = null;
+    cloud = { mode: false, token: '', base: '' };
+    el('tokstate').className = 'meta';
+    el('tokstate').textContent = '未验证';
+  });
+
+  var drop = el('drop');
+  drop.onclick = function(){ el('file').click(); };
+  drop.ondragover = function(e){ e.preventDefault(); drop.classList.add('on'); };
+  drop.ondragleave = function(){ drop.classList.remove('on'); };
+  drop.ondrop = function(e){
+    e.preventDefault(); drop.classList.remove('on');
+    handleFiles(e.dataTransfer.files);
+  };
+  el('file').onchange = function(e){ handleFiles(e.target.files); };
+
+  async function handleFiles(files){
+    if (!files || !files.length) return;
+    var list = Array.prototype.slice.call(files);
+    for (var i=0;i<list.length;i++) await handleOne(list[i]);
+    el('file').value = '';
+  }
+
+  async function handleOne(file){
+    var name = file.name || '';
+    var lower = name.toLowerCase();
+    try{
+      var bytes = new Uint8Array(await file.arrayBuffer());
+      if (lower.endsWith('.ldtc')){
+        var wav;
+        if (cloud.mode){
+          var resp = await fetch(cloud.base.replace(/\/+$/, '') + '/decrypt', {
+            method: 'POST',
+            headers: { 'x-ldte-token': cloud.token, 'content-type': 'application/octet-stream' },
+            body: bytes
+          });
+          if (!resp.ok){
+            var msg = '';
+            try { var err = await resp.json(); msg = (err && err.error) || ''; } catch(e2){}
+            throw new Error('云端解密失败：' + (msg || resp.status));
+          }
+          wav = new Uint8Array(await resp.arrayBuffer());
+        } else {
+          if (!master){
+            el('use').click();
+            if (!master) throw new Error('请先粘贴并验证临时密钥');
+          }
+          wav = await decryptClip(bytes, master);
+        }
+        var blob = new Blob([wav], {type:'audio/wav'});
+        var url = URL.createObjectURL(blob);
+        var audio = document.createElement('audio');
+        audio.controls = true; audio.src = url;
+        var dl = document.createElement('button');
+        dl.className = 'ghost'; dl.textContent = '另存为 WAV';
+        dl.onclick = function(){
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = name.replace(/\.ldtc$/i, '') + '.wav';
+          document.body.appendChild(a); a.click(); a.remove();
+        };
+        var row = document.createElement('div');
+        row.className = 'row'; row.appendChild(dl);
+        addResult(name, [audio, row], true,
+          (cloud.mode ? '云端解密' : '本机解密') + ' · ' + fmtSize(wav.length) +
+          (cloud.mode ? '' : ' · 密钥到期 ' + new Date(masterExp*1000).toLocaleString()));
+      } else if (lower.endsWith('.ldte')){
+        var d = parseLdte(bytes);
+        var dur = (d.frames * d.frameMs / 1000);
+        var canvas = document.createElement('canvas');
+        drawEnvelope(canvas, d.cols[0]);
+        var pre = document.createElement('pre');
+        pre.textContent = JSON.stringify(d.header, null, 2);
+        addResult(name, [canvas, pre], true,
+          '版本 v' + d.ver + ' · ' + d.frameMs + 'ms/帧 · ' + d.frames + ' 帧 · ' +
+          (dur/60).toFixed(2) + ' 分钟 · ' + d.channelCount + ' 通道 · ' + d.sampleRate + ' Hz · ' +
+          d.segCount + ' 分段 · ' + d.passes + ' 遍训练 · ' + fmtSize(bytes.length));
+      } else {
+        throw new Error('不支持的文件类型');
+      }
+    }catch(e){
+      addResult(name, [], false, String(e && e.message || e));
+    }
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "ba-ldte-gate",
+  "main": "src/index.js",
+  "compatibility_date": "2025-01-01",
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    { "binding": "LDTE_KV", "id": "db869e6742a84bf28272c12359f7eaf2" }
+  ]
+}

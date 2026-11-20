@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>spine probe</title>
+<style>body{margin:0;background:#222}#log{color:#0f0;font:12px/1.5 monospace;position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,.85);padding:8px;max-height:50vh;overflow:auto;z-index:99;white-space:pre}</style>
+</head>
+<body>
+<div id="log"></div>
+<div id="stage" style="width:800px;height:600px;position:relative"></div>
+<script src="assets/spine/spine-player.min.js"></script>
+<script>
+const log = m => { const el = document.getElementById('log'); el.textContent += m + '\n'; console.log('PROBE>', m); };
+window.onerror = (m,s,l)=> log('ERR: '+m+' @'+(s||'')+':'+(l||''));
+try{
+  log('spine=' + typeof spine + ' player=' + !!(spine.SpinePlayer));
+  const player = new spine.SpinePlayer('stage', {
+    skelUrl: '/spines/Mutsuki_home/Mutsuki_home.skel',
+    atlasUrl: '/spines/Mutsuki_home/Mutsuki_home.atlas',
+    backgroundColor: '#ff000080',
+    showControls: false,
+    alpha: true,
+    animation: 'Idle_01',
+    viewport: { padLeft:'0%', padRight:'0%', padTop:'0%', padBottom:'0%', transitionTime: 0 }
+  });
+  window.__pp = player;
+  setTimeout(()=>{
+    try{
+      const p = window.__pp;
+      const keys = Object.keys(p);
+      log('player keys: ' + keys.filter(k=>/scene|camera|context|webgl|canvas/i.test(k)).join(',') || keys.slice(0,60).join(','));
+      log('sceneRenderer=' + (p.sceneRenderer ? 'YES' : 'no'));
+      if(p.sceneRenderer){
+        log('sr keys: ' + Object.keys(p.sceneRenderer).filter(k=>/camera|context|canvas/i.test(k)).join(','));
+        const cam = p.sceneRenderer.camera;
+        if(cam) log('camera zoom=' + cam.zoom + ' pos=' + cam.position.x + ',' + cam.position.y + ' vw=' + cam.viewportWidth + ' vh=' + cam.viewportHeight);
+        const sk = p.skeleton;
+        if(sk){
+          log('skel data w=' + sk.data.width + ' h=' + sk.data.height + ' x=' + sk.data.x + ' y=' + sk.data.y);
+        }
+      }
+    }catch(e){ log('probe err: '+e.message); }
+  }, 4000);
+}catch(e){ log('top: '+e.message); }
+</script>
+</body>
+</html>

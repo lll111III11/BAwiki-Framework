@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>基沃托斯古书馆 · 本地离线版</title>
+<link rel="icon" href="assets/arona.ico">
+<link rel="stylesheet" href="assets/style.css?v=20261117a">
+</head>
+<body>
+
+<header id="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#/home">
+      <img src="assets/arona.png" class="brand-logo" alt="logo">
+      <div class="brand-text">
+        <span class="brand-name">基沃托斯古书馆</span>
+        <span class="brand-sub">SCHALE · 本地离线版</span>
+      </div>
+    </a>
+    <nav class="nav-links">
+      <a href="#/home" data-route="home">🏠 首页</a>
+      <a href="#/students" data-route="students">👤 学生图鉴</a>
+      <a href="#/gallery" data-route="gallery">🖼️ CG画廊</a>
+      <a href="#/music" data-route="music">🎵 留声机</a>
+      <a href="#/videos" data-route="videos">🎬 官方PV</a>
+      <a href="#/bilibili" data-route="bilibili">📺 B站视频</a>
+      <a href="#/online" data-route="online">⬇️ 在线更新</a>
+      <a href="#/me" data-route="me">⚙️ 我的设置</a>
+      <a href="admin.html" data-route="admin">🛠 管理</a>
+    </nav>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<div id="player" class="hidden">
+  <div class="player-inner">
+    <div class="pl-cover-wrap">
+      <span class="pl-cover-ph">🎵</span>
+      <img id="pl-cover" class="pl-cover" alt="">
+    </div>
+    <div class="pl-info">
+      <div id="pl-title" class="pl-title">未播放</div>
+      <div id="pl-artist" class="pl-artist"></div>
+      <div class="pl-seek">
+        <span id="pl-tcur" class="pl-time">0:00</span>
+        <div class="pl-bar"><div id="pl-prog" class="pl-prog"></div></div>
+        <span id="pl-tdur" class="pl-time">0:00</span>
+      </div>
+    </div>
+    <div class="pl-tools">
+      <div id="pl-spec" class="pl-spec" title="频谱（需在「高级音频」里启用接管）"></div>
+      <span id="pl-clip" class="pl-clip" title="检测到接近满量程的波峰，可能过曝">⚠ 过曝</span>
+      <button id="pl-mode" class="pl-tool" title="播放模式：顺序连播 / 单曲循环 / 随机">🔁</button>
+      <select id="pl-rate" class="pl-rate" title="播放倍速">
+        <option value="0.75">0.75x</option>
+        <option value="1" selected>1x</option>
+        <option value="1.25">1.25x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+      </select>
+      <button id="pl-mute" class="pl-tool" title="静音">🔊</button>
+      <input id="pl-vol" class="pl-vol" type="range" min="0" max="1" step="0.01" value="1" title="音量">
+    </div>
+    <div class="pl-controls">
+      <button id="pl-prev" title="上一首">⏮</button>
+      <button id="pl-play" title="播放/暂停">▶</button>
+      <button id="pl-next" title="下一首">⏭</button>
+    </div>
+  </div>
+</div>
+<audio id="audio"></audio>
+
+<div id="lightbox" class="hidden">
+  <button id="lb-close" class="lb-btn lb-close">✕</button>
+  <button id="lb-prev" class="lb-btn lb-prev">‹</button>
+  <img id="lb-img" alt="">
+  <button id="lb-next" class="lb-btn lb-next">›</button>
+  <div id="lb-name" class="lb-name"></div>
+  <div id="lb-refs" class="lb-refs"></div>
+</div>
+
+<div id="video-modal" class="hidden">
+  <div class="vm-box">
+    <button id="vm-close" class="lb-btn lb-close">✕</button>
+    <video id="vm-video" controls autoplay></video>
+    <div id="vm-title" class="vm-title"></div>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+
+<div id="msg-modal" class="hidden">
+  <div class="msg-box">
+    <img src="assets/arona.png" class="msg-ico" alt="">
+    <div id="msg-title" class="msg-title">老师，稍等一下！</div>
+    <div id="msg-text" class="msg-text"></div>
+    <button id="msg-ok" class="btn">我知道了</button>
+  </div>
+</div>
+
+<div id="voice-modal" class="hidden">
+  <div class="vm-box voice-box">
+    <button id="vcm-close" class="lb-btn lb-close">✕</button>
+    <div class="vm-title">🎵 角色与剧情音乐</div>
+    <input type="text" id="vcm-q" placeholder="🔍 搜索学生名 / 剧情 / 剧场，查看相关音乐">
+    <div class="vcm-body">
+      <div class="vcm-stu" id="vcm-stu"></div>
+      <div class="vcm-lines" id="vcm-lines">
+        <div class="empty" style="border:none">← 先在左边选择分组或学生，查看相关的音乐</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="disc-gate" class="login-gate hidden">
+  <div class="lg-card disc-card">
+    <img src="assets/arona.png" class="lg-logo" alt="logo">
+    <h1>进入前请先阅读</h1>
+    <div class="disc-body">
+      <p>本站是<b>个人非商业性质</b>的本地离线资料站，仅用于学习与资料查阅。</p>
+      <p>为识别访问设备、做访问标记与免登录授权，本站会记录访问者的 <b>IP 地址</b>；不接入任何第三方统计，不用于商业用途，不对外分享原始访问日志。</p>
+      <p>继续访问即表示你已知悉并同意上述说明。</p>
+    </div>
+    <button id="disc-ok">我已知悉并同意</button>
+    <button id="disc-no" class="disc-no">不同意</button>
+    <div id="disc-err" class="lg-err hidden"></div>
+  </div>
+</div>
+
+<div id="login-gate" class="login-gate hidden">
+  <div class="lg-card">
+    <img src="assets/arona.png" class="lg-logo" alt="logo">
+    <h1>管理或用户登录界面</h1>
+    <div class="lg-sub">请输入管理账号或用户账号</div>
+    <form id="lg-form" autocomplete="on">
+      <label>账号</label>
+      <input type="text" id="lg-user" autocomplete="username" placeholder="请输入账号" required autofocus>
+      <label>密码</label>
+      <input type="password" id="lg-pass" autocomplete="current-password" placeholder="没有密码可留空">
+      <button type="submit" id="lg-btn">登 录</button>
+    </form>
+    <div id="lg-err" class="lg-err hidden"></div>
+    <div class="lg-hint">若该账号本身没有设置密码，输入账号后点击【登录】即可直接进入。</div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="assets/spine/spine-player.min.css">
+<script src="assets/spine/spine-player.min.js"></script>
+<script src="assets/engine/lobby-engine.js?v=20261114b"></script>
+<script src="assets/sfx.js?v=20261114b"></script>
+<script src="assets/audio-lab.js?v=20261117c"></script>
+<script src="assets/app.js?v=20261120a"></script>
+</body>
+</html>

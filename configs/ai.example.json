@@ -1,0 +1,1 @@
+﻿{ "apiKey": "", "model": "deepseek-v4-flash", "thinking": "high", "webThinking": "medium", "enabled": true, "maxContext": 1000000, "userContextBytes": 524288 }

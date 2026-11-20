@@ -1,0 +1,48 @@
+# Build output
+bin/
+obj/
+out/
+publish-single/
+*.pdb
+*.obj
+*.lib
+*.exp
+
+# Binaries and installers
+*.exe
+*.dll
+*.vsix
+*.7z
+*.zip
+*.rar
+
+# Runtime data and caches
+kivo_wiki/
+LDTE训练/
+_本地维基/
+AAModAudio/
+*.ldte
+*.ldtc
+
+# Secrets
+_keys/
+cloud.json
+ai.json
+accounts.json
+.dev.vars
+*.key
+初始密码.txt
+
+# Logs and diagnostics
+*.log
+console_cmd.txt
+console_out.txt
+*_diag.json
+response.json
+
+# Editor / OS
+.vs/
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini

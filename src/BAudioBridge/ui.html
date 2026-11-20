@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BA 本地音频引擎</title>
+<style>
+:root{--bg:#070b14;--fg:#dbe7ff;--dim:#7f8fb0;--line:#1d2942;--pri:#4a6cf7;--ok:#5fd39a;--bad:#ff7b7b;--warn:#ffcf6b}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#16223c,#070b14 60%);color:var(--fg);
+ font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;min-height:100vh}
+.wrap{max-width:980px;margin:0 auto;padding:26px 18px 40px}
+h1{font-size:18px;margin:0 0 4px;letter-spacing:.5px}
+.sub{color:var(--dim);font-size:12px;margin-bottom:18px}
+.card{border:1px solid var(--line);background:rgba(16,23,40,.72);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:12px;letter-spacing:1px;color:#9db4e0;margin:0 0 10px;font-weight:600;text-transform:uppercase}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px}
+.kv b{font-weight:400;color:var(--dim)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;border:1px solid var(--line);background:rgba(255,255,255,.04);margin:2px 4px 2px 0;font-size:11.5px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+input,select{background:#0d1524;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:inherit;outline:none}
+input[type=text]{flex:1;min-width:280px}
+button{background:var(--pri);color:#fff;border:0;border-radius:8px;padding:7px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:#16203a;color:var(--fg);border:1px solid var(--line)}
+.bar{height:4px;background:#16203a;border-radius:99px;overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pri),#8ab4ff)}
+#log{max-height:190px;overflow:auto;font-size:11.5px;color:var(--dim);white-space:pre-wrap}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--bad);margin-right:6px}
+.dot.on{background:var(--ok)}
+a{color:#8ab4ff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>BA 本地音频引擎</h1>
+  <div class="sub">页面只是外壳：解码、声道、输出都在这个本地程序里跑。地址 127.0.0.1:{{PORT}}</div>
+  <div class="sub" style="margin-top:-10px">首次运行 Windows 可能弹出「是否允许此应用对你的设备进行更改」或 SmartScreen 拦截，选择「仍要运行」即可；本程序不写系统目录。</div>
+
+  <div class="card">
+    <h2>引擎状态</h2>
+    <div class="kv">
+      <b>运行状态</b><span><i class="dot on"></i>在线（关闭本程序的窗口即停止）</span>
+      <b>ffmpeg</b><span id="ff">—</span>
+      <b>解码器</b><span id="dec">—</span>
+      <b>输出声道</b><span id="mc">—</span>
+      <b>输出设备</b><span id="devs">—</span>
+    </div>
+    <div class="bar"><i id="prog"></i></div>
+    <div class="row"><span id="state" class="chip">未播放</span><span id="el" class="chip">0.0 s</span><span id="chs" class="chip">0 声道</span><span id="dol" class="chip">杜比：关闭</span></div>
+  </div>
+
+  <div class="card">
+    <h2>实时波形（最近 8 秒）</h2>
+    <canvas id="wave" style="width:100%;height:170px;display:block;border-radius:10px;background:#0a1020;border:1px solid var(--line)"></canvas>
+    <div class="row">
+      <span id="wstate" class="chip">等待音频</span>
+      <span id="wpeak" class="chip">峰值 —</span>
+      <span id="wcols" class="chip">0 列</span>
+      <span class="sub" style="margin:0">新波形从右侧进入，历史向左滚动；填满 8 秒后整体左移。</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>播放</h2>
+    <div class="row">
+      <input type="text" id="url" placeholder="粘贴本站音频地址（右键曲目 → 复制链接，或 http://127.0.0.1:8234/media?p=...）">
+    </div>
+    <div class="row">
+      <select id="ch">
+        <option value="6">5.1 六声道</option>
+        <option value="2" selected>立体声</option>
+        <option value="0">自动</option>
+      </select>
+      <select id="dolby">
+        <option value="off">杜比：关闭</option>
+        <option value="dd">杜比数字 5.1 直解</option>
+        <option value="dsu">Dolby Surround 上混</option>
+        <option value="cinema">杜比影院增强</option>
+        <option value="night">杜比夜间模式</option>
+      </select>
+      <select id="dev"><option value="-1">默认设备</option></select>
+      <button id="play">播放</button>
+      <button id="stop" class="ghost">停止</button>
+      <span id="msg" class="chip">就绪</span>
+    </div>
+    <div class="sub" style="margin-top:6px">杜比预设走 ffmpeg 滤镜链：上混 = Dolby Surround 的声场展开，影院 = 上混 + 对白增强 + 低频 + 压缩，夜间 = 响度均衡 + 压缩。它们只做“效果”，不解 AC-3 的商业编码——真正的杜比码流由 ffmpeg 直接解码。</div>
+  </div>
+
+  <div class="card">
+    <h2>日志</h2>
+    <div id="log"></div>
+  </div>
+</div>
+<script>
+var $ = function (id) { return document.getElementById(id); };
+function log(s) {
+  var t = new Date().toLocaleTimeString();
+  $("log").textContent = "[" + t + "] " + s + "\n" + $("log").textContent;
+}
+function tick() {
+  fetch("/health?t=" + Date.now()).then(function (r) { return r.json(); }).then(function (j) {
+    $("ff").textContent = j.ffmpeg;
+    $("dec").innerHTML = "AC-3 " + (j.decoders.ac3 ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>') +
+      "  E-AC-3 " + (j.decoders.eac3 ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>') +
+      "  DTS " + (j.decoders.dca ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>') +
+      "  TrueHD " + (j.decoders.truehd ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>');
+    $("mc").innerHTML = j.multichannel ? '<span class="ok">6 声道可直接打开</span>' : '<span class="warn">只能 2 声道，5.1 会降级</span>';
+    var ds = j.devices || [], h = "", i;
+    for (i = 0; i < ds.length; i++) h += '<span class="chip">' + ds[i].id + " · " + ds[i].name + " · " + ds[i].channels + "ch</span>";
+    $("devs").innerHTML = h || '<span class="bad">没有输出设备</span>';
+    var sel = $("dev");
+    if (sel.getAttribute("data-n") !== String(ds.length)) {
+      sel.setAttribute("data-n", String(ds.length));
+      var o = '<option value="-1">默认设备</option>';
+      for (i = 0; i < ds.length; i++) o += '<option value="' + ds[i].id + '">' + ds[i].id + " · " + ds[i].name + "</option>";
+      sel.innerHTML = o;
+    }
+    $("state").innerHTML = j.playing ? '<span class="ok">● 播放中</span>' : "未播放";
+    $("chs").textContent = (j.channels || 0) + " 声道";
+    $("dol").textContent = "杜比：" + (j.dolbyName || "关闭");
+    $("el").textContent = (j.elapsed || 0) + " s";
+    $("prog").style.width = (j.playing ? Math.min(100, (j.elapsed % 180) / 1.8) : 0) + "%";
+    if (!j.playing && j.error) { $("msg").className = "chip bad"; $("msg").textContent = j.error; }
+  }).catch(function () {
+    $("state").innerHTML = '<span class="bad">引擎失联</span>';
+  });
+}
+setInterval(tick, 1200);
+tick();
+
+var wcols = [], wsince = 0, wcolTotal = 480;
+var wcv = $("wave"), wg = wcv.getContext("2d");
+function wresize() {
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  wcv.width = Math.max(200, Math.floor(wcv.clientWidth * dpr));
+  wcv.height = Math.floor(wcv.clientHeight * dpr);
+}
+window.addEventListener("resize", wresize);
+wresize();
+
+function wdraw(peak, playing) {
+  var W = wcv.width, H = wcv.height, mid = H / 2, sy = H / 2 - 8;
+  wg.clearRect(0, 0, W, H);
+  wg.strokeStyle = "rgba(255,255,255,.06)"; wg.lineWidth = 1;
+  for (var i = 1; i < 4; i++) {
+    var y = Math.round(H * i / 4) + .5;
+    wg.beginPath(); wg.moveTo(0, y); wg.lineTo(W, y); wg.stroke();
+  }
+  wg.strokeStyle = "rgba(255,255,255,.16)";
+  wg.beginPath(); wg.moveTo(0, mid + .5); wg.lineTo(W, mid + .5); wg.stroke();
+  wg.strokeStyle = "rgba(255,123,123,.30)"; wg.setLineDash([8, 8]);
+  [0.94, -0.94].forEach(function (v) {
+    var y = Math.round(mid - v * sy) + .5;
+    wg.beginPath(); wg.moveTo(0, y); wg.lineTo(W, y); wg.stroke();
+  });
+  wg.setLineDash([]);
+
+  var n = wcols.length;
+  if (!n) {
+    wg.fillStyle = "#7b8bab"; wg.font = "14px sans-serif";
+    wg.fillText("开始播放后显示实时波形", 16, mid - 12);
+    return;
+  }
+  var cw = W / wcolTotal;
+  var x0 = W - n * cw;
+  wg.fillStyle = "rgba(95,211,154,.92)";
+  for (var k = 0; k < n; k++) {
+    var c = wcols[k];
+    var y1 = mid - c[1] * sy, y2 = mid - c[0] * sy;
+    wg.fillRect(x0 + k * cw, y1, Math.max(1, cw), Math.max(1, y2 - y1));
+  }
+  if (peak > 0.999) {
+    wg.fillStyle = "rgba(255,123,123,.55)";
+    wg.fillRect(0, 0, W, 2);
+  }
+}
+
+function wfetch() {
+  fetch("/wave?since=" + wsince + "&t=" + Date.now())
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j || !j.ok) return;
+      var add = j.cols || [];
+      for (var i = 0; i < add.length; i++) wcols.push(add[i]);
+      var over = wcols.length - 480;
+      if (over > 0) wcols.splice(0, over);
+      wsince = j.total;
+      $("wcols").textContent = wcols.length + " 列";
+      var p = 0;
+      for (var k = 0; k < wcols.length; k++) {
+        var c = wcols[k];
+        if (-c[0] > p) p = -c[0];
+        if (c[1] > p) p = c[1];
+      }
+      if (p > 0) {
+        var db = 20 * Math.log10(p);
+        $("wpeak").innerHTML = db > -0.2 ? '<span class="bad">' + db.toFixed(1) + ' dBFS</span>' : '<span class="ok">' + db.toFixed(1) + ' dBFS</span>';
+      }
+      $("wstate").innerHTML = wcols.length ? '<span class="ok">● 接收中</span>' : "等待音频";
+      wdraw(p, true);
+    })
+    .catch(function () {});
+}
+setInterval(wfetch, 50);
+wfetch();
+
+$("play").onclick = function () {
+  var u = $("url").value.trim();
+  if (!u) { $("msg").className = "chip bad"; $("msg").textContent = "先粘贴音频地址"; return; }
+  $("msg").className = "chip";
+  $("msg").textContent = "正在启动…";
+  fetch("/play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: u, channels: +$("ch").value, device: +$("dev").value, dolby: $("dolby").value })
+  }).then(function (r) { return r.json(); }).then(function (j) {
+    if (j.ok) {
+      log("开始播放 · " + j.channels + " 声道 · " + (j.dolbyName || "杜比关闭"));
+      $("msg").className = "chip ok"; $("msg").textContent = "已开始";
+    }
+    else { $("msg").className = "chip bad"; $("msg").textContent = j.error || "失败"; log("失败：" + (j.error || "")); }
+  });
+};
+
+$("stop").onclick = function () {
+  fetch("/stop", { method: "POST" }).then(function () {
+    log("已停止"); $("msg").className = "chip"; $("msg").textContent = "已停止";
+  });
+};
+</script>
+</body>
+</html>

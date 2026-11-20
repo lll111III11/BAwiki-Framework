@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>基沃托斯古书馆 · 管理控制台</title>
+<link rel="icon" href="assets/arona.ico">
+<style>
+:root{
+  --p:#263473; --p2:#3d4f9e; --acc:#4a7fd4; --gold:#e8b64c;
+  --bg:#eef2f8; --card:#fff; --txt:#333639; --sub:#8a93a6;
+  --line:#e5eaf5; --soft:#f6f8fd; --danger:#b03a3a; --ok:#1e8a4c;
+  --shadow:0 10px 30px rgba(38,52,115,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body.night{
+  --p:#8fb3ff; --p2:#7a9ff0; --acc:#6f9ce8; --gold:#e8b64c;
+  --bg:#0a0f1e; --card:#10182c; --txt:#dbe4f6; --sub:#7e8eb0;
+  --line:#1c2745; --soft:#121a30; --danger:#e07a7a; --ok:#5ec58a;
+  --shadow:0 12px 34px rgba(0,0,0,.5);
+}
+body{font-family:'Microsoft YaHei','微软雅黑',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;transition:background .6s;padding-bottom:40px}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--acc);text-decoration:none}
+.hd{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:14px;padding:13px 26px;background:rgba(255,255,255,.78);backdrop-filter:blur(16px) saturate(140%);box-shadow:0 2px 18px rgba(20,30,70,.10)}
+body.night .hd{background:rgba(10,15,30,.72)}
+.hd h1{font-size:18px;color:var(--p)}
+.hd .tag{font-size:11px;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--p);font-weight:700}
+.hd .sp{flex:1}
+.hd .who{font-size:12.5px;color:var(--sub)}
+.wrap{max-width:1040px;margin:0 auto;padding:22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px;backdrop-filter:blur(14px)}
+.card h2{font-size:15px;color:var(--p);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.lbl{font-size:12.5px;color:var(--sub);font-weight:600}
+input[type=text],input[type=password],input[type=number],select{padding:8px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:13.5px;outline:none;background:var(--soft);color:var(--txt);font-family:inherit}
+body.night input,body.night select{background:#0e1630}
+input:focus,select:focus{border-color:var(--acc)}
+.btn{display:inline-block;padding:8px 18px;border:none;border-radius:999px;background:var(--p);color:#fff;font-size:13px;font-weight:700;transition:all .15s}
+.btn:hover{background:var(--p2);transform:translateY(-1px)}
+.btn.ghost{background:transparent;color:var(--p);border:2px solid var(--p)}
+.btn.danger{background:var(--danger)}
+.btn:disabled{opacity:.5;transform:none;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--sub);font-weight:700;padding:9px 10px;border-bottom:2px solid var(--line);font-size:12px}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:hover td{background:var(--soft)}
+.chip{display:inline-block;font-size:11px;padding:2px 9px;border-radius:99px;background:var(--soft);color:var(--p);font-weight:700;margin-right:4px}
+.rb{display:inline-block;font-size:11px;font-weight:800;padding:3px 10px;border-radius:99px}
+.rb.super{background:var(--p);color:#fff}.rb.admin{background:var(--acc);color:#fff}.rb.user{background:var(--soft);color:var(--sub)}
+.switch{position:relative;display:inline-block;width:46px;height:24px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.switch .sl{position:absolute;inset:0;background:#ccd4e6;border-radius:99px;transition:background .15s}
+.switch .sl::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.switch input:checked+.sl{background:var(--p)}
+.switch input:checked+.sl::before{transform:translateX(22px)}
+.trow{display:flex;align-items:center;gap:14px;padding:10px 2px;border-bottom:1px dashed var(--line)}
+.trow:last-child{border-bottom:none}
+.trow .tn{font-size:14px;font-weight:700}.trow .td{font-size:12px;color:var(--sub);margin-top:2px}
+.badge{display:inline-block;padding:4px 14px;border-radius:99px;font-size:13px;font-weight:800}
+.badge.on{background:rgba(30,138,76,.14);color:var(--ok)}.badge.off{background:rgba(176,58,58,.12);color:var(--danger)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px}
+.stat{background:var(--soft);border-radius:11px;padding:13px 15px}
+.stat .n{font-size:21px;font-weight:900;color:var(--p)}.stat .k{font-size:12px;color:var(--sub);margin-top:2px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:10px;background:var(--soft);margin-bottom:6px;font-size:13px}
+.item .u{font-weight:700;color:var(--p)}.item .m{color:var(--sub);font-size:12px}
+.empty{color:var(--sub);font-size:13px;padding:14px 0;text-align:center}
+.hint{font-size:12px;color:var(--sub);line-height:1.8;margin-top:10px}
+code{background:var(--soft);padding:2px 8px;border-radius:6px;font-size:12px;color:var(--p)}
+.edit{background:var(--soft);border:1px dashed var(--line);border-radius:12px;padding:14px 16px;margin:10px 0;display:none}
+.edit.show{display:block}
+#toast{position:fixed;top:66px;left:50%;transform:translateX(-50%);background:rgba(38,52,115,.95);color:#fff;padding:9px 22px;border-radius:99px;z-index:99;font-size:13px;display:none;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+
+#login{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(900px 480px at 12% 18%,rgba(90,134,216,.5),transparent 60%),radial-gradient(800px 420px at 88% 82%,rgba(38,52,115,.65),transparent 60%),linear-gradient(120deg,#263473,#3d5bb0 55%,#5a86d8)}
+#login.show{display:flex}
+.lg{background:rgba(255,255,255,.16);backdrop-filter:blur(22px) saturate(150%);border:1px solid rgba(255,255,255,.4);border-radius:20px;width:344px;padding:32px 30px 24px;box-shadow:0 24px 70px rgba(0,0,0,.4);color:#fff}
+.lg h1{font-size:19px;text-align:center;margin-bottom:4px}
+.lg .sub{font-size:12.5px;color:rgba(255,255,255,.75);text-align:center;margin-bottom:18px}
+.lg label{display:block;font-size:13px;color:rgba(255,255,255,.92);margin:12px 0 5px;font-weight:600}
+.lg input{width:100%;padding:10px 13px;border:1.5px solid rgba(255,255,255,.45);border-radius:10px;background:rgba(255,255,255,.14);color:#fff;outline:none;font-size:14px}
+.lg input:focus{border-color:#fff}
+.lg button{width:100%;margin-top:18px;padding:11px;border:none;border-radius:999px;background:#fff;color:#263473;font-size:14.5px;font-weight:800}
+.lg button:disabled{opacity:.6}
+.lg .back{display:block;text-align:center;margin-top:14px;font-size:12.5px;color:rgba(255,255,255,.85);text-decoration:none;font-weight:700}
+.lg .err{background:rgba(240,60,60,.24);color:#ffd9d9;font-size:12.5px;padding:7px 12px;border-radius:8px;margin-top:12px;text-align:center;display:none}
+.lg .lghint{font-size:11px;color:rgba(255,255,255,.6);line-height:1.7;text-align:center;margin-top:14px}
+</style>
+</head>
+<body>
+<script>try{document.body.classList.toggle('night',localStorage.getItem('bwiki_theme')==='night')}catch(e){}</script>
+
+<header class="hd">
+  <h1>🛠 基沃托斯古书馆 · 管理控制台</h1>
+  <span class="tag" id="who">…</span>
+  <span class="sp"></span>
+  <a href="index.html">主站</a>
+  <button class="btn ghost" id="logout" style="padding:5px 14px;font-size:12px;display:none">退出</button>
+</header>
+<div id="toast"></div>
+
+<div id="login" class="show">
+  <div class="lg">
+    <h1>管理或用户登录界面</h1>
+    <div class="sub">请输入管理账号或用户账号</div>
+    <label>账号</label><input type="text" id="lg-user" autocomplete="username" autofocus>
+    <label>密码</label><input type="password" id="lg-pass" autocomplete="current-password" placeholder="没有密码可留空">
+    <div class="err" id="lg-err"></div>
+    <button id="lg-btn">登 录</button>
+    <a class="back" href="index.html">← 返回主站</a>
+    <div class="lghint">普通用户（如游客 guest）登录后进入主站浏览；管理员账号登录后进入管理控制台。若账号本身没有设置密码，输入账号即可直接登录。</div>
+  </div>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+
+  <div class="card">
+    <h2>⚙️ 站点设置</h2>
+    <div class="trow"><div style="flex:1"><div class="tn">动态滑动效果 / UI 动效</div><div class="td">悬停滑出按钮、卡片动效、骨架屏动画</div></div>
+      <label class="switch"><input type="checkbox" id="s-anim"><span class="sl"></span></label></div>
+    <div class="trow"><div style="flex:1"><div class="tn">画面切换过渡</div><div class="td">页面切换的方向过渡动画（白上 / 夜下）</div></div>
+      <label class="switch"><input type="checkbox" id="s-trans"><span class="sl"></span></label></div>
+    <div class="trow"><div style="flex:1"><div class="tn">高速阅览</div><div class="td">图片仅加载 128px 粗略小图，点开再投递原图</div></div>
+      <label class="switch"><input type="checkbox" id="s-fast"><span class="sl"></span></label></div>
+    <div class="trow"><div style="flex:1"><div class="tn">显示下载按钮</div><div class="td">图片 / 音乐 / 视频旁的「⬇ 下载」</div></div>
+      <label class="switch"><input type="checkbox" id="s-dl"><span class="sl"></span></label></div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="s-save">保存设置</button><span class="lbl" id="s-tip"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>📥 解析服务 <span id="parse-badge" class="badge off">未知</span></h2>
+    <div class="trow"><div style="flex:1"><div class="tn">监听「发现」目录</div><div class="td">丢进去的文件自动识别并归档；无法解析的留在原地，只返回错误码</div></div>
+      <label class="switch"><input type="checkbox" id="parse-on"><span class="sl"></span></label></div>
+    <div class="hint" id="parse-inbox">—</div>
+    <div class="hint" id="parse-log" style="white-space:pre-line">—</div>
+  </div>
+
+  <div class="card">
+    <h2>🎚️ LDTE 训练档案 <span id="ldte-badge" class="badge off">—</span></h2>
+    <div class="trow"><div style="flex:1"><div class="tn">容量上限（GB）</div><div class="td">训练档案总量上限，可设 1–12 GB；超出后自动清理最旧的单曲档案</div></div>
+      <input type="number" id="ldte-gb" min="1" max="12" step="1" style="width:90px">
+    </div>
+    <div class="trow"><div style="flex:1"><div class="tn">单文件模式</div><div class="td">所有播放过的音乐只写入一个 LDTE 文件（聚合档案 + 曲目索引），不再生成单曲文件</div></div>
+      <label class="switch"><input type="checkbox" id="ldte-single"><span class="sl"></span></label></div>
+    <div class="trow"><div style="flex:1"><div class="tn">全录制</div><div class="td">每首播放过的音乐都完整录制原始音频（AES-256-GCM 独立加密归档），同时保留特征分析数据</div></div>
+      <label class="switch"><input type="checkbox" id="ldte-full"><span class="sl"></span></label></div>
+    <div class="row"><button class="btn" id="ldte-save">保存</button><span class="lbl" id="ldte-tip"></span></div>
+    <div class="hint" id="ldte-usage">—</div>
+    <div class="trow" style="margin-top:6px"><div style="flex:1"><div class="tn">离线临时密钥</div><div class="td">Cloudflare 不可达时用它解密 LDTE 片段；最长 24 小时，可随时吊销；生成后粘贴到程序目录的 BAwikiDecrypt.exe</div></div>
+      <input type="number" id="ldte-temp-hours" min="1" max="24" value="24" style="width:70px">
+      <button class="btn ghost" id="ldte-tempgen">生成</button></div>
+    <textarea id="ldte-tempout" readonly style="width:100%;height:58px;background:#0d1324;color:#9fd0ff;border:1px solid #2a3a5c;border-radius:8px;padding:8px;font-size:12px;word-break:break-all" placeholder="生成后复制到这里显示的临时密钥"></textarea>
+    <div class="hint" id="ldte-templist">—</div>
+    <div class="trow" style="margin-top:8px"><div style="flex:1"><div class="tn">云端密钥（Cloudflare）</div><div class="td">在线时由 Worker 签发，离线使用；最长 23 小时，恢复联网后主程序会自动吊销</div></div>
+      <input type="number" id="ldte-cloud-hours" min="1" max="23" value="23" style="width:70px">
+      <button class="btn ghost" id="ldte-cloudgen">生成</button></div>
+    <textarea id="ldte-cloudout" readonly style="width:100%;height:58px;background:#0d1324;color:#ffd79f;border:1px solid #5c4a2a;border-radius:8px;padding:8px;font-size:12px;word-break:break-all" placeholder="生成后显示 CFK1 云密钥"></textarea>
+    <div class="hint" id="ldte-cloudlist">—</div>
+  </div>
+
+  <div class="card">
+    <h2>🧩 插件系统 <span class="lbl" style="margin-left:auto" id="plug-dir">—</span></h2>
+    <div class="row"><button class="btn ghost" id="plug-refresh">重新扫描</button><span class="lbl" id="plug-tip"></span></div>
+    <div id="plug-list"></div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="plug-analyze-path" placeholder="DLL 路径，例如 E:\tools\ffmpeg\FFmpeg.AutoGen.dll" style="flex:1">
+      <button class="btn ghost" id="plug-analyze">分析</button>
+    </div>
+    <pre class="hint" id="plug-analyze-out" style="white-space:pre-wrap;max-height:240px;overflow:auto"></pre>
+    <div class="hint">每个插件一个文件夹 + plugin.json，放进程序目录的 plugins\ 后自动出现。支持 exe / dll / jar（dll 走 dotnet，jar 走 java），热插拔由目录监听完成。</div>
+  </div>
+
+  <div class="card">
+    <h2>🎛️ 图形加速（缩略图） <span id="gpu-badge" class="badge off">未知</span></h2>
+    <div class="trow"><div style="flex:1"><div class="tn">GPU 缩略图（D3D11 + WIC）</div><div class="td">用显卡解码与缩放缩略图；失败会自动回退到 CPU</div></div>
+      <label class="switch"><input type="checkbox" id="gpu-on"><span class="sl"></span></label></div>
+    <div class="row"><button class="btn" id="gpu-save">应用</button><button class="btn ghost" id="gpu-force">强行设置</button><span class="lbl" id="gpu-tip"></span></div>
+    <div class="hint" id="gpu-mode">当前缩略图引擎：—</div>
+    <div class="hint">开关拨动后立即生效。关闭只影响服务端生成缩略图，浏览器自身的画面渲染仍由 Windows 显卡加速。</div>
+    <div class="hint">强行设置会先弹出 Windows 管理员验证窗口；如果本机无法弹出，会连续询问两次确认，确认后才会生效。</div>
+  </div>
+
+  <div class="card">
+    <h2>📡 对外服务 <span id="ext-badge" class="badge off">未知</span></h2>
+    <div class="row">
+      <span class="lbl">端口</span><input type="number" id="ext-port" style="width:110px" min="1024" max="65535">
+      <button class="btn" id="ext-toggle">开启</button>
+      <button class="btn ghost" id="ext-refresh">刷新</button>
+    </div>
+    <div class="hint" id="ext-hint"></div>
+  </div>
+
+  <div class="card">
+    <h2>👥 账号管理 <span class="lbl" style="margin-left:auto">共 <b id="acct-count">0</b> 个</span></h2>
+    <div class="row"><button class="btn ghost" id="acct-new">+ 新建账号</button></div>
+    <div class="edit" id="acct-edit">
+      <div class="row">
+        <span class="lbl">用户名</span><input type="text" id="a-name" placeholder="登录账号">
+        <span class="lbl">密码</span><input type="password" id="a-pass" placeholder="留空=无密码（登录直接进入）">
+        <span class="lbl" id="a-role-lbl" style="display:none">角色</span>
+        <select id="a-role" style="display:none"><option value="user">普通用户</option><option value="admin">管理员</option></select>
+      </div>
+      <div class="row">
+        <span class="lbl">可访问</span>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="students"> 学生图鉴</label>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="gallery"> CG画廊</label>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="music"> 留声机</label>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="videos"> 官方PV</label>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="bili"> B站视频</label>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="online"> 在线更新</label>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="memories"> 回忆大厅</label>
+        <label style="font-size:12.5px"><input type="checkbox" class="a-perm" value="models"> 3D模型</label>
+      </div>
+      <div class="row">
+        <span class="lbl">限速 KB/s</span><input type="number" id="a-kb" style="width:96px" min="0" placeholder="0=不限">
+        <span class="lbl">每日配额 MB</span><input type="number" id="a-quota" style="width:104px" min="0" placeholder="0=不限">
+        <button class="btn" id="a-save">保存</button><button class="btn ghost" id="a-cancel">取消</button>
+      </div>
+    </div>
+    <table><thead><tr><th>账号</th><th>角色</th><th>权限</th><th>限速</th><th>配额</th><th></th></tr></thead>
+      <tbody id="acct-body"></tbody></table>
+  </div>
+
+  <div class="card">
+    <h2>🔑 设备授权 <span class="lbl" style="margin-left:auto">已授权 <b id="dev-count">0</b> 台</span></h2>
+    <div id="dev-list"><div class="empty">加载中…</div></div>
+    <div class="hint">把「BAwikiAuth.exe」复制到其它电脑运行，可把该电脑授权为管理员设备（打开网页即自动 admin 登录）。持有授权器即视为管理员。</div>
+  </div>
+
+  <div class="card">
+    <h2>📊 实时统计 <span class="sp" style="flex:1"></span><button class="btn ghost" id="st-refresh">刷新</button></h2>
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="hint" style="margin-bottom:6px">在线访客：</div>
+    <div id="online"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn danger" id="cache-clear">清理缩略图缓存</button>
+      <span class="lbl" id="cache-info"></span>
+    </div>
+    <div class="hint">对外服务同时监听 <code>IPv4（0.0.0.0）</code>与<code>IPv6（[::]）</code>双栈：兼容普通局域网、虚拟局域网 / P2P 组网（Tailscale、ZeroTier 等）；家庭宽带若有公网 IPv6，其它设备可直接访问 IPv6 地址，无需端口转发。本机自动以 admin 登录，其它电脑凭账号或授权器。</div>
+  </div>
+
+  <div class="card">
+    <h2>🤖 AI 运维控制台 <span class="lbl" style="margin-left:auto" id="ai-badge">…</span></h2>
+    <div class="hint" id="ai-meta" style="margin-bottom:10px">正在读取…</div>
+    <div id="ai-chat" style="height:320px;overflow:auto;background:var(--soft);border-radius:12px;padding:12px;font-size:13.5px;line-height:1.75"></div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="ai-input" placeholder="输入任务或问题，例如：检查更新完整性并告诉我缺什么" style="flex:1;min-width:220px">
+      <button class="btn" id="ai-send">发送</button>
+      <button class="btn ghost" id="ai-reset">清空会话</button>
+    </div>
+    <div class="hint">后台指令：<code>AI</code> 查看状态 · <code>AI TASK 任务</code> 开会话 · <code>AI THINK medium</code> 调思考 · <code>AI CTX 1000000</code> 调上下文。网页端默认中等思考、每用户 0.5 MB 会话上限，带长期记忆与工具调用。打开本页会恢复当前账户的历史对话，不再从空白开始。</div>
+  </div>
+
+  <div class="card">
+    <h2>🗂 AI 会话记录 <span class="lbl" style="margin-left:auto" id="ai-hist-badge">…</span></h2>
+    <div class="hint">汇总全部运维相关对话（本机控制台 / 管理后台），默认不含普通网页对话；条目显示使用账户与角色，点开可查看完整上下文。</div>
+    <div class="row" style="margin:8px 0">
+      <button class="btn ghost" id="ai-hist-refresh">刷新</button>
+      <label class="hint" style="display:flex;align-items:center;gap:6px;margin-left:auto;cursor:pointer"><input type="checkbox" id="ai-hist-all"> 包含普通对话</label>
+    </div>
+    <div id="ai-hist-list"><div class="empty">加载中…</div></div>
+    <div id="ai-hist-detail" style="display:none;margin-top:10px">
+      <div class="hint" id="ai-hist-meta"></div>
+      <div id="ai-hist-msgs" style="max-height:360px;overflow:auto;background:var(--soft);border-radius:12px;padding:12px;font-size:13.5px;line-height:1.75"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🧩 MCP 工具 <span class="lbl" style="margin-left:auto" id="mcp-count">…</span></h2>
+    <div id="mcp-list"><div class="empty">加载中…</div></div>
+    <div class="hint">这些工具是给 AI 用的，界面不提供手动调用；AI 在对话中会自己判断何时调用，调用记录会显示在对话气泡下方。<code>live2d_audit</code> / <code>fetch_live2d</code> 用于动态立绘（Live2D / Spine）资源的检查与补齐，配合 <code>screenshot</code> / <code>view_image</code> 做视觉校验。</div>
+  </div>
+
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let ME=null, ACCTS=[], editing=null;
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2200)}
+function fmt(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';if(b<1073741824)return (b/1048576).toFixed(1)+' MB';return (b/1073741824).toFixed(2)+' GB'}
+async function jget(u){const r=await fetch(u+(u.includes('?')?'&':'?')+'t='+Date.now(),{credentials:'same-origin'});const j=await r.json();if(j&&j.needLogin)showLogin();return j}
+async function jpost(u,b){const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify(b||{})});const j=await r.json();if(j&&j.needLogin)showLogin();return j}
+
+function showLogin(){$('#login').classList.add('show');$('#app').style.display='none'}
+function hideLogin(){$('#login').classList.remove('show');$('#app').style.display=''}
+function doLogin(){const btn=$('#lg-btn'),name=$('#lg-user').value.trim(),pass=$('#lg-pass').value;const err=$('#lg-err');
+  err.style.display='none';
+  if(!name){err.style.display='block';err.textContent='请输入账号';return}
+  btn.disabled=true;btn.textContent='登录中…';
+  (async()=>{try{const d=await jpost('/api/admin/login',{name,pass});
+    if(d.error){err.style.display='block';err.textContent=d.error;return}
+    if(d.role==='user'){
+      toast('已以「'+d.name+'」登录主站，正在跳转…');
+      location.href='index.html';
+      return;
+    }
+    toast('欢迎，'+d.name);hideLogin();refreshAll();
+  }catch(e){err.style.display='block';err.textContent='登录请求异常，请检查服务器后重试（'+(e&&e.message?e.message:e)+'）'}
+  finally{btn.disabled=false;btn.textContent='登 录'}})()}
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='lg-btn')doLogin()});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&($('#lg-user')&&document.activeElement&&(document.activeElement.id==='lg-user'||document.activeElement.id==='lg-pass')))doLogin()});
+$('#logout').onclick=async()=>{await jpost('/api/admin/logout',{});showLogin()};
+
+async function loadSettings(){const d=await (await fetch('/api/settings?t='+Date.now())).json();
+  $('#s-anim').checked=d.ui_animation!==false;$('#s-trans').checked=d.ui_transition!==false;$('#s-fast').checked=d.fast_view!==false;$('#s-dl').checked=d.show_download!==false}
+$('#s-save').onclick=async()=>{const btn=$('#s-save');btn.disabled=true;
+  try{const d=await jpost('/api/admin/settings',{ui_animation:$('#s-anim').checked,ui_transition:$('#s-trans').checked,fast_view:$('#s-fast').checked,show_download:$('#s-dl').checked});
+    if(d.error){toast('保存失败：'+d.error);return}$('#s-tip').textContent='已保存 · '+new Date().toLocaleTimeString();toast('✅ 设置已保存')}
+  finally{btn.disabled=false}}
+
+async function loadGpu(sync){
+  try{
+    const d=await jget('/api/admin/gpu'); if(d.needLogin)return;
+    if(sync!==false) $('#gpu-on').checked=!!d.enabled;
+    const b=$('#gpu-badge'); b.className='badge '+(d.enabled?'on':'off');
+    b.textContent=d.enabled?(d.forced?'已启用（强制）':'已启用'):'已关闭';
+    $('#gpu-tip').textContent=d.available?'检测到硬件加速设备':(d.dll?'本机没有可用的硬件加速设备':'缺少 BAwikiGpu.dll');
+    $('#gpu-mode').textContent='当前缩略图引擎：'+(d.enabled?'GPU':'CPU')+
+      '（本次已生成 GPU '+(d.gpuMade||0)+' 张 / CPU '+(d.cpuMade||0)+' 张）';
+  }catch(e){}
+}
+async function loadParse(){
+  try{
+    const d=await jget('/api/admin/parse'); if(d.needLogin)return;
+    $('#parse-on').checked=!!d.on;
+    const b=$('#parse-badge'); b.className='badge '+(d.on?'on':'off'); b.textContent=d.on?'运行中':'已关闭';
+    $('#parse-inbox').textContent='发现目录：'+d.inbox+'（丢入后约 6 秒内处理）';
+    const rows=(d.results||[]).map(x=>x.time+'  '+(x.ok?'✅ ':'❌ ')+x.file+(x.ok?' → '+x.to:'  '+x.error));
+    $('#parse-log').textContent=rows.length?'最近处理：\n'+rows.join('\n'):'还没有处理记录';
+  }catch(e){}
+}
+$('#parse-on').onchange=async()=>{
+  const on=$('#parse-on').checked;
+  const d=await jpost('/api/admin/parse',{on});
+  if(d.ok){toast(on?'✅ 解析服务已开启':'解析服务已关闭');loadParse();}
+};
+
+async function loadLdte(){
+  try{
+    const d=await jget('/api/admin/ldte'); if(d.needLogin)return;
+    $('#ldte-gb').value=d.maxGB||12;
+    $('#ldte-single').checked=!!d.singleFile;
+    $('#ldte-full').checked=!!d.fullRecord;
+    const b=$('#ldte-badge'); b.className='badge '+(d.singleFile?'on':'off');
+    b.textContent=d.singleFile?'单文件':'多文件';
+    $('#ldte-usage').textContent='当前占用 '+fmt(d.usedBytes||0)+' / 上限 '+fmt(d.capBytes||0)+' · '+d.files+' 个档案 · '+(d.clips||0)+' 段加密音频 · '+d.dir;
+  }catch(e){}
+}
+$('#ldte-save').onclick=async()=>{
+  const btn=$('#ldte-save'); btn.disabled=true;
+  try{
+    const gb=Math.max(1,Math.min(12,parseInt($('#ldte-gb').value||'12',10)||12));
+    $('#ldte-gb').value=gb;
+    const d=await jpost('/api/admin/ldte',{maxGB:gb,singleFile:$('#ldte-single').checked,fullRecord:$('#ldte-full').checked});
+    if(d.error){toast('保存失败：'+d.error);return}
+    $('#ldte-tip').textContent='已保存 · '+new Date().toLocaleTimeString();
+    toast('✅ LDTE 设置已保存'); loadLdte();
+  } finally { btn.disabled=false; }
+};
+async function loadTempKeys(){
+  try{
+    const d=await jget('/api/admin/ldte/tempkey');
+    const act=(d.items||[]).filter(x=>x.active);
+    const box=$('#ldte-templist');
+    if(!act.length){ box.textContent='暂无有效临时密钥'; return; }
+    box.innerHTML='有效临时密钥：'+act.map(x=>`<span style="display:inline-block;margin:2px 8px 2px 0">${esc(x.id)} · ${esc(x.expiresAt)} <button class="btn ghost" style="padding:2px 8px" onclick="__ldteRevoke('${esc(x.id)}')">吊销</button></span>`).join('');
+  }catch(e){}
+}
+window.__ldteRevoke=async(id)=>{
+  const d=await jpost('/api/admin/ldte/tempkey',{revoke:id});
+  toast(d.ok?'已吊销':'吊销失败'); loadTempKeys();
+};
+$('#ldte-tempgen').onclick=async()=>{
+  const btn=$('#ldte-tempgen'); btn.disabled=true;
+  try{
+    const hours=Math.max(1,Math.min(24,parseInt($('#ldte-temp-hours').value||'24',10)||24));
+    const d=await jpost('/api/admin/ldte/tempkey',{hours});
+    if(!d.ok){toast('生成失败');return}
+    $('#ldte-tempout').value='BAT1 临时密钥（'+d.hours+' 小时有效，到期 '+d.expiresAt+'）\n'+d.token+'\n解密工具：'+d.tool+'（网页版：'+d.toolHtml+'）';
+    $('#ldte-tempout').select();
+    toast('✅ 临时密钥已生成，已选中可直接复制');
+    loadTempKeys();
+  } finally { btn.disabled=false; }
+};
+async function loadCloudKeys(){
+  try{
+    const d=await jget('/api/admin/ldte/cloudkey');
+    const box=$('#ldte-cloudlist');
+    if(!d.configured){ box.textContent='未配置 cloud.json，云端链路不可用'; return; }
+    const act=(d.items||[]).filter(x=>x.active);
+    box.innerHTML='云端 '+esc(d.baseUrl||'')+' · 有效 '+act.length+' 个'+(act.length?act.map(x=>`<span style="margin-left:8px">${esc(x.id)} · ${esc(x.expiresAt)} <button class="btn ghost" style="padding:2px 8px" onclick="__cloudRevoke('${esc(x.id)}')">吊销</button></span>`).join(''):'');
+  }catch(e){}
+}
+window.__cloudRevoke=async(id)=>{
+  const d=await jpost('/api/admin/ldte/cloudkey',{revoke:id});
+  toast(d.ok?'已吊销':'吊销失败'); loadCloudKeys();
+};
+$('#ldte-cloudgen').onclick=async()=>{
+  const btn=$('#ldte-cloudgen'); btn.disabled=true;
+  try{
+    const hours=Math.max(1,Math.min(23,parseInt($('#ldte-cloud-hours').value||'23',10)||23));
+    const d=await jpost('/api/admin/ldte/cloudkey',{hours});
+    if(!d.ok){ $('#ldte-cloudout').value='生成失败：'+(d.error||'')+(d.detail?('\n'+d.detail):''); return }
+    $('#ldte-cloudout').value='CFK1 云密钥（'+d.hours+' 小时有效，到期 '+d.expiresAt+'）\n'+d.token+'\n云端：'+d.baseUrl;
+    $('#ldte-cloudout').select();
+    toast('✅ 云密钥已生成'); loadCloudKeys();
+  } finally { btn.disabled=false; }
+};
+
+async function loadPlugins(){
+  try{
+    const d=await jget('/api/admin/plugins'); if(d.needLogin)return;
+    $('#plug-dir').textContent=d.dir||'';
+    const list=d.plugins||[], box=$('#plug-list');
+    if(!list.length){ box.innerHTML='<div class="hint">还没有插件。把插件文件夹放进 plugins\\ 后会自动出现。</div>'; return; }
+    box.innerHTML=list.map(p=>`<div class="trow" style="flex-wrap:wrap"><div style="flex:1"><div class="tn">${esc(p.name)} <span class="lbl">v${esc(p.version||'—')}</span>${p.auto?' <span class="badge off">未配置</span>':''}</div>
+      <div class="td">${(p.categories||[]).join(' · ')||'未声明能力'}${(p.formats||[]).length?' · '+(p.formats||[]).join(' '):''}${p.lastError?' · ❌ '+esc(p.lastError):''}${p.lastRun?' · '+esc(p.lastRun):''}</div></div>
+      <label class="switch"><input type="checkbox" data-plug="${esc(p.id)}" ${p.enabled?'checked':''}><span class="sl"></span></label>
+      <div style="flex-basis:100%;margin-top:6px;display:flex;gap:6px;align-items:center">
+        <select data-force="${esc(p.id)}" style="padding:4px 6px;border-radius:6px">
+          ${['','parser','audio','ui','mcp','ai','global'].map(f=>`<option value="${f}" ${(p.force||'')===f?'selected':''}>${f?('强制：'+f):'归类：自动'}</option>`).join('')}
+        </select>
+        <input data-cfg="${esc(p.id)}" value="${esc(p.config||'{}')}" style="flex:1;padding:4px 6px;border-radius:6px" placeholder='参数 JSON，例如 {"tier":"high","gain":1}'>
+        <button class="btn ghost" data-save="${esc(p.id)}">保存</button>
+        ${p.auto?`<button class="btn ghost" data-manifest="${esc(p.id)}">生成清单</button>`:''}
+      </div></div>`).join('');
+    box.querySelectorAll('[data-plug]').forEach(el=>{
+      el.onchange=async()=>{
+        const r=await jpost('/api/admin/plugins',{id:el.dataset.plug,enabled:el.checked});
+        if(r.ok){toast(el.checked?'✅ 插件已启用':'插件已停用');loadPlugins();}
+      };
+    });
+    box.querySelectorAll('[data-force]').forEach(sel=>{
+      sel.onchange=async()=>{
+        const r=await jpost('/api/admin/plugins',{id:sel.dataset.force,force:sel.value});
+        if(r.ok){toast('归类已更新');loadPlugins();}
+      };
+    });
+    box.querySelectorAll('[data-manifest]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const r=await jpost('/api/admin/plugins',{manifest:btn.dataset.manifest});
+        if(r.ok){toast('已生成清单，可继续配置');loadPlugins();}else toast('生成失败');
+      };
+    });
+    box.querySelectorAll('[data-save]').forEach(btn=>{
+      btn.onclick=async()=>{
+        const id=btn.dataset.save;
+        const el=box.querySelector('[data-cfg="'+id+'"]');
+        const r=await jpost('/api/admin/plugins',{id,config:el.value});
+        if(r.ok){toast('参数已保存');loadPlugins();}else toast('保存失败：'+(r.error||'JSON 格式不对'));
+      };
+    });
+  }catch(e){}
+}
+$('#plug-analyze').onclick=async()=>{
+  const p=($('#plug-analyze-path').value||'').trim();
+  const out=$('#plug-analyze-out');
+  if(!p){toast('先填 DLL 路径');return;}
+  out.textContent='分析中…';
+  const d=await jpost('/api/admin/plugins',{analyze:p});
+  if(!d.ok){out.textContent='失败：'+(d.error||'未知错误');return;}
+  out.textContent='归类：'+(d.categories||[]).join(' · ')+
+    '\n类型 '+d.typeCount+' 个 / 方法 '+d.methodCount+' 个\n\n依赖：\n'+(d.references||[]).join('\n')+
+    '\n\n类型（前 40）：\n'+(d.types||[]).slice(0,40).join('\n')+
+    '\n\n方法（前 40）：\n'+(d.methods||[]).slice(0,40).join('\n');
+};
+$('#plug-refresh').onclick=async()=>{
+  const d=await jpost('/api/admin/plugins',{id:'*',refresh:true});
+  if(d.ok){toast('已重新扫描插件目录');loadPlugins();}
+};
+
+async function gpuApply(force){
+  const btn=$('#gpu-save'); btn.disabled=true;
+  try{
+    let d=await jpost('/api/admin/gpu',{enabled:$('#gpu-on').checked,force:false});
+    if(d.needForce){
+      if(!force){ toast('本机没有可用的 GPU，请点「强行设置」'); return; }
+      if(!confirm('本机没有可用的硬件加速设备。是否仍然强行启用 GPU 缩略图？')) return;
+      if(!confirm('再次确认：强行启用后可能出现画面异常或闪退，确定继续吗？')) return;
+      d=await jpost('/api/admin/gpu',{enabled:true,force:true});
+      if(d.uac==='granted') toast('已通过 Windows 管理员验证');
+      else if(d.uac==='cancelled') toast('已取消管理员验证，按确认结果继续');
+    }
+    if(d.ok){ toast('✅ GPU 设置已应用'); loadGpu(); }
+    else toast('失败：'+(d.error||'未知'));
+  } finally { btn.disabled=false; }
+}
+$('#gpu-save').onclick=()=>gpuApply(false);
+$('#gpu-force').onclick=()=>gpuApply(true);
+$('#gpu-on').onchange=()=>gpuApply(false);
+
+async function loadStatus(){const d=await jget('/api/admin/status');if(d.needLogin)return;
+  ME={name:d.me,role:d.role};
+  $('#who').textContent='管理员：'+d.me+'（'+(d.role==='super'?'超级':d.role==='admin'?'普通':'?' )+'）';
+  $('#logout').style.display='';
+  const b=$('#ext-badge');b.className='badge '+(d.external?'on':'off');b.textContent=d.external?'运行中':'已关闭';
+  $('#ext-port').value=d.extPort;$('#ext-toggle').textContent=d.external?'关闭':'开启';
+  const ips=(d.lanIps&&d.lanIps.length)?d.lanIps:[d.lanIp||'127.0.0.1'];
+  const v6=(d.v6Ips&&d.v6Ips.length)?d.v6Ips:[];
+  const v6Gua=v6.filter(x=>/^[23]/.test(x));
+  const v6Other=v6.filter(x=>!/^[23]/.test(x));
+  const v4addr=ips.map(i=>`<code>http://${esc(i)}:${d.extPort}/</code>`).join('<br>');
+  const v6GuaAddr=v6Gua.map(i=>`<code>http://[${esc(i)}]:${d.extPort}/</code>`).join('<br>');
+  const v6OtherAddr=v6Other.map(i=>`<code>http://[${esc(i)}]:${d.extPort}/</code>`).join('<br>');
+  $('#ext-hint').innerHTML='本地：<code>'+d.localUrl+'</code><br>'+(d.external?(
+    (v6Gua.length?('🌐 公网 IPv6 直连（自动监听全端口，无需端口转发）：<br>'+v6GuaAddr+'<br>'):'')+
+    (v6Other.length?('🔗 虚拟局域网 IPv6：<br>'+v6OtherAddr+'<br>'):'')+
+    '🖥 IPv4 局域网（含虚拟局域网 / P2P 组网）：<br>'+v4addr+'<br>'+
+    '🌍 公网 IPv4（可选）：请在路由器把 TCP '+d.extPort+' 固定转发到本机；'+(v6.length?('IPv6 与 IPv4 同时可用、互不影响。<br>'):'')+
+    '当前在线 <b>'+d.onlineCount+'</b> 人<br>'+
+    '<span style="font-size:11px;color:var(--sub)">IPv6 地址实时获取：运营商更换前缀后此处会自动更新。IPv6 监听全部接口（[::]），IPv4 监听局域网与端口转发入口（0.0.0.0）。请确保防火墙放行 TCP '+d.extPort+'（IPv4 与 IPv6）。</span>'
+  ):'开启对外服务后按以上地址访问（本机自动 admin，其它电脑凭账号或授权器）。')}
+$('#ext-toggle').onclick=async()=>{const btn=$('#ext-toggle');btn.disabled=true;
+  try{const port=parseInt($('#ext-port').value);if(!port||port<1024||port>65535){toast('端口无效');return}
+    const cur=$('#ext-badge').classList.contains('on');
+    const d=await jpost('/api/admin/external',{enabled:!cur,port});
+    if(d.error){toast('操作失败：'+d.error);return}
+    toast(d.enabled?'✅ 已开启对外服务（端口 '+d.port+'）':'已关闭对外服务');loadStatus()
+  }finally{btn.disabled=false}}
+
+async function loadAccounts(){const d=await jget('/api/admin/accounts');if(d.needLogin)return;
+  ACCTS=d.accounts||[];ME=ME||{};ME.role=d.role||ME.role;
+  $('#acct-count').textContent=ACCTS.length;
+  $('#acct-body').innerHTML=ACCTS.length?ACCTS.map(a=>{
+    const isSuper=ME.role==='super';
+    const canEdit=isSuper||a.role==='user';
+    const canDel=(isSuper&&a.name!=='admin')||(a.role==='user'&&a.name!=='admin');
+    return `<tr><td><b>${esc(a.name)}</b>${a.name==='admin'?' <span class="chip">内置</span>':''}</td>
+      <td><span class="rb ${a.role}">${a.role==='super'?'超级管理员':a.role==='admin'?'管理员':'普通用户'}</span></td>
+      <td>${(a.perms||[]).length?(a.perms||[]).map(p=>`<span class="chip">${esc(p)}</span>`).join(''):'<span class="chip">无</span>'}</td>
+      <td>${a.kb||'不限'}</td><td>${a.quota||'不限'}</td>
+      <td>${canEdit?`<button class="btn ghost" style="padding:4px 11px;font-size:12px" onclick="editAcct('${esc(a.name)}')">编辑</button>`:''}
+          ${canDel?`<button class="btn danger" style="padding:4px 11px;font-size:12px" onclick="delAcct('${esc(a.name)}')">删除</button>`:''}</td></tr>`
+  }).join(''):'<tr><td colspan="6"><div class="empty">暂无账号</div></td></tr>'}
+function editAcct(name){editing=name;const a=ACCTS.find(x=>x.name===name)||{};
+  $('#a-name').value=a.name||'';$('#a-name').disabled=!!a.name;$('#a-pass').value='';
+  $('#a-kb').value=a.kb||0;$('#a-quota').value=a.quota||0;
+  const p=a.perms||[];$$('.a-perm').forEach(c=>c.checked=p.includes(c.value));
+  const isNew=!a.name;const canRole=isNew&&ME.role==='super';
+  $('#a-role').style.display=canRole?'':'none';$('#a-role-lbl').style.display=canRole?'':'none';
+  $('#a-role').value=(a&&a.role==='admin')?'admin':'user';
+  $('#acct-edit').classList.add('show')}
+$('#acct-new').onclick=()=>{editAcct('');$('#a-name').disabled=false;$('#a-name').focus()};
+$('#a-cancel').onclick=()=>{$('#acct-edit').classList.remove('show');editing=null};
+$('#a-save').onclick=async()=>{const btn=$('#a-save');btn.disabled=true;
+  try{const name=$('#a-name').value.trim(),pass=$('#a-pass').value;
+    if(!name){toast('用户名不能为空');return}
+    const isNew=!ACCTS.some(x=>x.name===name);
+    if(isNew&&!pass&&!confirm('该账号将不设置密码（登录时输入账号即可直接进入），确定继续？')){return}
+    const perms=$$('.a-perm:checked').map(c=>c.value);
+    const role=$('#a-role').style.display==='none'?'user':$('#a-role').value;
+    const d=await jpost('/api/admin/accounts',{action:isNew?'add':'update',name,pass,perms,role,kb:parseInt($('#a-kb').value)||0,quota:parseInt($('#a-quota').value)||0});
+    if(d.error){toast('保存失败：'+d.error);return}
+    toast('✅ 已保存');$('#acct-edit').classList.remove('show');editing=null;loadAccounts()}
+  finally{btn.disabled=false}}
+window.editAcct=editAcct;
+window.delAcct=async name=>{if(name==='admin'){toast('不可以删除内置 admin');return}
+  const a=ACCTS.find(x=>x.name===name);if(a&&a.role!=='user'&&ME.role!=='super'){toast('普通管理员不可删除管理员账号');return}
+  if(!confirm('确定删除账号 '+name+' 吗？'))return;
+  try{const d=await jpost('/api/admin/accounts',{action:'delete',name});if(d.error){toast('删除失败：'+d.error);return}toast('已删除 '+name);loadAccounts()}catch(e){toast('删除失败')}};
+
+async function loadDevices(){const d=await jget('/api/device/list');if(d.needLogin)return;
+  const list=d.devices||[];$('#dev-count').textContent=list.length;
+  $('#dev-list').innerHTML=list.length?list.map(ip=>`<div class="item"><span class="u">🖥 ${esc(ip)}</span><span class="sp" style="flex:1"></span><button class="btn danger" style="padding:4px 11px;font-size:12px" onclick="revokeDev('${esc(ip)}')">撤销</button></div>`).join(''):'<div class="empty">暂无已授权设备</div>'}
+window.revokeDev=async ip=>{if(!confirm('撤销设备 '+ip+' 的管理员权限？'))return;
+  const d=await jpost('/api/device/revoke',{ip});if(d.error){toast('撤销失败：'+d.error);return}toast('已撤销 '+ip);loadDevices()};
+
+async function loadStats(){const d=await jget('/api/admin/stats');if(d.needLogin)return;
+  $('#stat-grid').innerHTML=`
+    <div class="stat"><div class="n">${d.onlineCount}</div><div class="k">在线访客</div></div>
+    <div class="stat"><div class="n">${fmt(d.todayBytes||0)}</div><div class="k">今日对外流量</div></div>
+    <div class="stat"><div class="n">${d.accountCount}</div><div class="k">账号总数</div></div>
+    <div class="stat"><div class="n">${(d.thumbCount||0).toLocaleString()}</div><div class="k">缩略图缓存 ${fmt(d.thumbSize||0)}</div></div>`;
+  $('#online').innerHTML=(d.onlineUsers||[]).length?(d.onlineUsers||[]).map(u=>`<div class="item"><span class="u">${esc(u.user)}</span><span class="m">IP ${esc(u.ip||'?')} · ${u.minutes} 分钟 · ${fmt(u.bytes)}</span></div>`).join(''):'<div class="empty">暂无在线访客</div>';
+  $('#cache-info').textContent=(d.thumbCount||0)+' 个 / '+fmt(d.thumbSize||0)}
+$('#st-refresh').onclick=loadStats;
+$('#cache-clear').onclick=async()=>{if(!confirm('删除全部缩略图缓存并在后台重建？'))return;
+  try{const d=await jpost('/api/admin/cache-clear',{});if(d.error){toast('失败：'+d.error);return}toast('✅ 已清理 '+d.deleted+' 个（'+fmt(d.freed)+'）');loadStats()}catch(e){toast('清理失败')}};
+
+function refreshAll(){loadSettings();loadStatus();loadAccounts();loadDevices();loadStats();loadGpu();loadParse();loadPlugins();loadAi();loadAiSessions();loadMcp();loadLdte();loadTempKeys();loadCloudKeys()}
+
+let aiBusy=false, aiHistLoaded=false;
+function aiWho(){ return (ME&&(ME.name||ME.user))||'admin'; }
+async function loadAi(){
+  try{
+    const d=await jget('/api/ai/state?user='+encodeURIComponent(aiWho())); if(d.needLogin) return;
+    $('#ai-badge').textContent=(d.enabled?'已启用':'已关闭')+' · '+d.model;
+    $('#ai-meta').textContent=(d.enabled?'AI 已启用':'AI 已关闭')+' · 模型 '+d.model+' · 思考 '+d.thinking+' · 后台上下文 '+d.maxContext.toLocaleString()+' tokens · 每用户 '+(d.userContextBytes/1024).toFixed(0)+' KB · Key '+d.keyMasked
+      +(d.updated?' · 本账户上次对话 '+d.updated:'');
+    const box=$('#ai-chat'), msgs=d.messages||[];
+    if(!aiHistLoaded && box.childElementCount===0 && msgs.length){
+      const tip=document.createElement('div');
+      tip.style.cssText='color:var(--sub);font-size:12px;margin-bottom:8px';
+      tip.textContent='↺ 已恢复该账户的历史对话（'+msgs.length+' 条，'+d.updated+'）';
+      box.appendChild(tip);
+      msgs.forEach(m=>aiBubble(m.role==='user'?'user':'ai',m.content));
+      aiHistLoaded=true;
+    }
+  }catch(e){ $('#ai-badge').textContent='不可用'; }
+}
+let aiHistUser='';
+async function loadAiSessions(){
+  try{
+    const all=$('#ai-hist-all').checked?'?all=1':'';
+    const d=await jget('/api/ai/sessions'+all); if(d.needLogin) return;
+    const list=d.sessions||[];
+    $('#ai-hist-badge').textContent=list.length+' 个会话';
+    $('#ai-hist-list').innerHTML=list.length?list.map(s=>{
+      const role=s.source==='console'?'本机控制台':(s.role==='super'?'超级管理员':(s.role==='admin'?'管理员':(s.role||'普通用户')));
+      return `<div class="item" data-user="${esc(s.user)}" style="cursor:pointer">
+        <div style="flex:1"><div class="u">${esc(s.account||s.user)} <span class="chip">${esc(s.sourceName)}</span></div>
+        <div class="m">${esc(s.title||'（无标题）')}</div>
+        <div class="m">${esc(role)} · ${s.count} 条 · ${fmt(s.bytes)} · ${esc(s.updated)}</div></div>
+        <span class="chip">查看</span></div>`}).join(''):'<div class="empty">暂无运维对话</div>';
+    $$('#ai-hist-list .item').forEach(el=>el.onclick=()=>openAiSession(el.dataset.user));
+  }catch(e){ $('#ai-hist-badge').textContent='不可用'; }
+}
+async function openAiSession(user){
+  aiHistUser=user;
+  const d=await jget('/api/ai/history?user='+encodeURIComponent(user));
+  if(!d.ok){ toast(d.error||'读取失败'); return; }
+  const role=d.source==='console'?'本机控制台':(d.role==='super'?'超级管理员':(d.role==='admin'?'管理员':'普通用户'));
+  $('#ai-hist-detail').style.display='';
+  $('#ai-hist-meta').textContent=`账户 ${d.account||d.user}（${role}） · 来源 ${d.sourceName} · 模型 ${d.model||'—'} · 更新 ${d.updated||'—'} · ${d.messages.length} 条消息`;
+  const box=$('#ai-hist-msgs'); box.innerHTML='';
+  d.messages.forEach(m=>{
+    const el=document.createElement('div');
+    el.style.cssText='margin-bottom:10px;white-space:pre-wrap;'+(m.role==='user'?'text-align:right;color:var(--p);font-weight:700':'color:var(--txt)');
+    el.textContent=(m.role==='user'?'账户：':'Koyuki：')+m.content;
+    if(m.time){ const t=document.createElement('div'); t.textContent=m.time; t.style.cssText='color:var(--sub);font-size:11px;margin-top:2px'; el.appendChild(t); }
+    box.appendChild(el);
+  });
+  box.scrollTop=box.scrollHeight;
+}
+function aiBubble(role,text){
+  const box=$('#ai-chat');
+  const el=document.createElement('div');
+  el.style.cssText='margin-bottom:10px;white-space:pre-wrap;'+(role==='user'?'text-align:right;color:var(--p);font-weight:700':'color:var(--txt)');
+  el.textContent=(role==='user'?'你：':(role==='err'?'⚠ ':'Koyuki：'))+text;
+  box.appendChild(el); box.scrollTop=box.scrollHeight;
+}
+async function aiSend(){
+  if(aiBusy) return;
+  const inp=$('#ai-input'), msg=inp.value.trim();
+  if(!msg) return;
+  inp.value=''; aiBubble('user',msg); aiHistLoaded=true;
+  aiBusy=true; $('#ai-send').disabled=true;
+  const tip=document.createElement('div'); tip.textContent='思考中…'; tip.style.cssText='color:var(--sub);font-size:12.5px;margin-bottom:10px';
+  $('#ai-chat').appendChild(tip); $('#ai-chat').scrollTop=$('#ai-chat').scrollHeight;
+  try{
+    const d=await jpost('/api/ai/chat',{user:aiWho(),source:'admin',message:msg});
+    tip.remove();
+    if(!d.ok) aiBubble('err',d.error||'请求失败');
+    else{
+      aiBubble('ai',d.reply||'（空回复）');
+      const box=$('#ai-chat');
+      (d.traces||[]).forEach(t=>{
+        const el=document.createElement('div');
+        el.style.cssText='color:var(--sub);font-size:11.5px;margin:-4px 0 10px 2px;white-space:pre-wrap';
+        el.textContent='🔧 '+t.name+' → '+String(t.result||'').slice(0,140);
+        box.appendChild(el);
+      });
+      box.scrollTop=box.scrollHeight;
+    }
+  }catch(e){ tip.remove(); aiBubble('err','请求失败：'+e.message); }
+  aiBusy=false; $('#ai-send').disabled=false; loadAi();
+}
+$('#ai-send').onclick=aiSend;
+$('#ai-input').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); aiSend(); } });
+$('#ai-reset').onclick=async()=>{
+  if(!confirm('清空当前 AI 会话？（长期记忆保留）')) return;
+  await jpost('/api/ai/reset',{user:aiWho()});
+  $('#ai-chat').innerHTML=''; aiBubble('ai','会话已清空。'); aiHistLoaded=true; loadAiSessions();
+};
+$('#ai-hist-refresh').onclick=loadAiSessions;
+$('#ai-hist-all').onchange=loadAiSessions;
+
+async function loadMcp(){
+  try{
+    const d=await jget('/api/ai/tools'); if(d.needLogin) return;
+    const list=d.tools||[];
+    $('#mcp-count').textContent=list.length+' 个工具';
+    $('#mcp-list').innerHTML=list.length?list.map(t=>`<div class="item" style="align-items:flex-start">
+      <div style="flex:1"><div class="u">${esc(t.name)}</div><div class="m" style="margin-top:2px">${esc(t.description)}</div></div>
+      <span class="chip">AI 调用</span>
+    </div>`).join(''):'<div class="empty">没有可用工具</div>';
+  }catch(e){ $('#mcp-count').textContent='不可用'; }
+}
+
+(async function init(){const d=await jget('/api/admin/status');if(d.needLogin)return;hideLogin();refreshAll()})();
+setInterval(()=>{if($('#app').style.display!=='none'&&!document.hidden){loadStats();loadGpu(false)}},30000);
+</script>
+</body>
+</html>
