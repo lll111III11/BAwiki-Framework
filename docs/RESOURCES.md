@@ -14,14 +14,28 @@ If your goal is to study the architecture, skip this page, point the server at a
 
 ## Where it lives
 
-The library is distributed through **Baidu Netdisk (百度网盘)**.
+The library is distributed through **Baidu Netdisk (百度网盘)**. Two profiles are supported:
+
+| Profile | Contents | Size |
+| --- | --- | --- |
+| `Lite` | students, official gallery, game music, memory lobby, item icons, lossless music | ~54 GB |
+| `Full` | everything above plus official PV, Bilibili videos, 3D models, model library | ~107 GB |
+
+Pack and split locally with [`scripts/pack-resources.ps1`](../scripts/pack-resources.ps1):
+
+```powershell
+# Lite pack, 3.9 GB volumes
+.\scripts\pack-resources.ps1 -Source E:\kivo_wiki -Dest D:\BAwiki-Resources -Profile Lite
+```
 
 > **Share link:** `<TO BE FILLED — paste the Baidu Netdisk share URL here>`
 > **Extraction code:** `<TO BE FILLED>`
 > **Pack version:** `<TO BE FILLED>`
-> **SHA256:** `<TO BE FILLED>`
+> **SHA256:** see `SHA256SUMS.txt` produced next to the archives
 
 The repository owner maintains this section after each pack is uploaded. Until a link is present, no public mirror exists.
+
+Uploading ~50–100 GB is a manual, one-off step: run the script, upload the volumes to Baidu Netdisk, then fill in the fields above. The repository itself never stores assets.
 
 ## Expected layout
 
